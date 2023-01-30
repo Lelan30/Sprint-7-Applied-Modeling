@@ -1,0 +1,12 @@
+import pandas as pd
+url="https://raw.githubusercontent.com/bloominstituteoftechnology/DS-Unit-2-Kaggle-Challenge/main/data/weather/weatherAUS.csv"
+weather = pd.read_csv(url)
+weather.head()
+
+weather.info()
+
+#Look at the outcome_type column
+weather['RainTomorrow'].value_counts(normalize=True)
+
+#The target has two somewhat imbalced classes with 78% 'Yes' and 22% 'No''
+#For imbalanced data we can use different metricts to evaluate the problem

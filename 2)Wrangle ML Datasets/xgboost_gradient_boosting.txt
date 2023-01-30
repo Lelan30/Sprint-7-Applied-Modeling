@@ -1,0 +1,46 @@
+#Bootstrap Aggragating(Bagging): The class with the most votes.
+#(After a decision tree is trained on each sample)
+
+#Boosting: Adding weights to a weaker decision tree(One noded or stump)
+#after finding the misclassified data. Samples that are difficult to classify will
+#have larger weights added to them until corecctly classified.(AdaBoost())
+
+#Gradient Boosting: When a tree is added, the hyperparams are adjusted to minimize the
+#loss function following the negative gradient.(XGBoost)
+
+from sklearn.base import estimator_html_repr
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+
+#Create X, y, training test sets
+iris = datasets.load_iris()
+X = iris.data
+y = iris.target
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.4, random_state=42)
+
+#Import classifier
+from sklearn.ensemble import AdaBoostClassifier
+
+ada_classifier = AdaBoostClassifier(n_estimators=50, learning_rate=1.5, random_state=42)
+ada_classifier.fit(X_train, y_train)
+
+print('Validation Accuracy: AdaBoost' , ada_classifier.score(X_test, y_test))
+
+#Outcome:
+#The classifier promoted very well.
+
+#We will set train-test split to 60/40 to challenge the classifier with smaller training set
+#Classify the same data with different boosting model xgboost
+from xgboost import XGBClassifier
+
+xg_classifier = XGBClassifier(n_estimators=50, random_state=42, eval_metric='merror')
+
+xg_classifier.fit(X_train, y_train)
+
+print('Validation Accuracy: Adaboost' , xg_classifier.score(X_test, y_test))
+
+#Outcome:
+#We increased the accuracy a bit.
+#More data is needed to make decision on which classifier is better

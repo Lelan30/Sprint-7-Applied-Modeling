@@ -1,0 +1,32 @@
+import pandas as pd
+
+cols_set1 = ['Evid', 'Magnitude', 'Magnitude Type', 'Time UTC', 'Lat', 'Lon', 'Depth Km']
+eq_set1 = pd.read_csv('pnsn_eqlist.csv', usecols=cols_set1)
+
+cols_set2 = ['time', 'latitude', 'longitude', 'depth', 'mag', 'magType', 'net', 'id']
+eq_set2 = pd.read_csv('usgs_eqlist.csv', usecols=cols_set2)
+
+display(eq_set1.head())
+display(eq_set2.head())
+
+#Clean up eq_set2
+#Strip the 'uw' or 'us' from number
+
+eq_set2['id'] = eq_set2['id'].map(lambda x: x.lstrip('uws'))
+
+#Add column with network code
+eq_set1['net'] = 'uw'
+
+#Rename columns
+new_cols= ['id', 'mag','magType','time','latitude','longitude','depth','net']
+eq_set1.columns = new_cols
+
+eq_set1.head()
+
+#Check data types
+print('Data type for eq_set1: ', eq_set1['id'].dtype)
+print('Data type for eq_set2: ', eq_set2['id'].dtype)
+
+#Change data type
+eq_set1['id'] = eq_set1['id'].astype('str')
+print('Data type for eq_set1: ', eq_set1['id'].dtype)

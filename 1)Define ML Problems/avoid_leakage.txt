@@ -1,0 +1,168 @@
+#Two main types of leakage are:
+#leaky features(prediction)
+#leaky validation or testing process
+
+#Leaky Features:
+#Occurs when you have a feature that has access to data that wont be available
+#when you actually use the model on new data(outside the test set)to make predictions
+
+#Leaky Testing Process/Validation Process
+#Occurs when your validation data 'learns' from the training data
+
+import pandas as pd
+url = "https://raw.githubusercontent.com/bloominstituteoftechnology/DS-Unit-2-Kaggle-Challenge/main/data/weather/weatherAUS.csv"
+
+weather = pd.read_csv(url)
+weather.head()
+
+#Look at the statistics of categorical variables
+weather.describe(include=['object'])
+
+weather.describe()
+#There are a lot of null values in some columns
+
+weather.isnull().sum()
+
+import matplotlib.pyplot as plt
+import missingno as msno
+msno.matrix(weather)
+
+plt.show()
+#The 'white spots' in the matrix are missing values in the dataset visualized
+#We have about four columns with a large number of missing values, these columns are mssing
+#about 40% of thier data(or more)
+#We will use an imputer in the preprocessing step
+
+#To simplify the data analysis for later we'll drop the location column
+
+#Drop columns with a high percentage of missing values
+cols_drop = ['Location', 'Evaporation', 'Sunshine', 'Cloud9am', 'Cloud3pm']
+weather_drop = weather.drop(cols_drop, axis=1)
+
+#Data Cleaning:DateTime
+#Convert the 'Date' column to datetime, extract month
+weather_drop['Date'] = pd.to_datetime(weather_drop['Date'], infer_datetime_format=True).dt.month
+
+#Data Processing: Pipeline
+#Seperate our features into numeric and categorical types and then perform transformation steps
+#Standardize numeric features that are on different scales
+#Impute our missing values with SimpleImputer
+#Categorical features will be ordinarily encoded
+
+#Print the column names
+weather_drop.columns
+
+import pandas as pd
+import numpy as np
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+
+#Define the numeric features
+numeric_features = ['MinTemp', 'MaxTemp', 'Rainfall','WindGustSpeed',
+                    'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am', 
+                    'Humidity3pm', 'Pressure9am','Pressure3pm', 
+                    'Temp9am', 'Temp3pm', 'RISK_MM']
+
+#Create the transformer (impute, scale)
+numeric_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())])
+
+#Define categorical features
+categorical_features = ['WindGustDir', 'WindDir9am', 'WindDir3pm', 'RainToday']
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
+    ('ordinal', OrdinalEncoder())])
+
+#Define how the numeric and categorical features will be transformed
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)])
+
+#Define the piepline steps, include the classifier
+clf = Pipeline(steps=[('preprocessor', preprocessor),
+                      ('classifier', DecisionTreeClassifier())])
+
+#Create feature target matrix
+X = weather_drop.drop('RainTomorrow', axis=1)
+
+#Create and encode the target array
+from sklearn.preprocessing import LabelEncoder
+label_enc = LabelEncoder()
+y = label_enc.fit_transform(weather_drop['RainTomorrow'])
+
+#Import train test split utility
+from sklearn.model_selection import train_test_split
+
+#Create the training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#Fit the model
+clf.fit(X_train, y_train)
+print('Validation accuracy' , clf.score(X_test, y_test))
+
+#Feature (order in which they were processed)
+features_order = numeric_features + categorical_features
+
+#Determine importances
+importances = pd.Series(clf.steps[1][1].feature_importances_, features_order)
+
+#Plot feature importances
+import matplotlib.pyplot as plt
+
+n = 7
+plt.figure(figsize=(10, n/2))
+plt.title(f'Top {n} features')
+importances.sort_values()[-n:].plot.barh(color='grey')
+
+plt.show()
+
+#Outcome:
+#The model was essantially fit to a single feature(predictor was related to target array)
+#(One of the features is leaking information "RISK_MM" - how much rain was recorded the following day)
+#Remove this column
+
+#Remove "RISK_MM"
+X_noriskmm = X.drop('RISK_MM', axis=1)
+
+#Create the new training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X_noriskmm, y, test_size=0.2, random_state=42)
+
+#Drop the 'RISK_MM' column from the numeric_features
+numeric_features = numeric_features.remove('RISK_MM')
+
+#Fit the model
+clf.fit(X_train, y_train)
+print('Validation Accuracy (with no "RISK_MM")', clf.score(X_test, y_test))
+
+#Outcome:
+#Accuracy is still high, but mush more reasonable
+
+#Get feature importances
+
+#Features (order in which the were processed)
+numeric_features = ['MinTemp', 'MaxTemp', 'Rainfall', 'WindGustSpeed', 
+                    'WindSpeed9am','WindSpeed3pm', 'Humidity9am', 
+                    'Humidity3pm', 'Pressure9am','Pressure3pm', 
+                    'Temp9am', 'Temp3pm']
+
+categorical_features = ['WindGustDir', 'WindDir9am', 'WindDir3pm', 'RainToday']
+features_order = numeric_features + categorical_features
+
+importances = pd.Series(clf.steps[1][1].feature_importances_, features_order)
+
+# Plot feature importances
+
+n = 7
+plt.figure(figsize=(10,n/2))
+plt.title(f'Top {n} features')
+importances.sort_values()[-n:].plot.barh(color='grey')
+
+plt.clf()
+

@@ -1,0 +1,54 @@
+#Choose an appropriate elevation metric
+
+#Classification and Regression metric are different
+#DONT use regression metrics to evaluate classification task
+#DONT use classification metrics to evaluate regression task
+
+#Classification Task:
+#We can use metrics- precision, recall, F! score, and Reciever Operating Characteristics (ROC)
+#Rules:
+#- Accuracy is useful majority 50-70%
+#- precision, recall helpful finding misclassified observations
+#- ROC curve helpful when need probabilities assiciated with predictions
+
+#Regression Task:
+#Scored by R squared value
+#The proportion of variance in the dependant variable(y) predictable from independant(x)
+
+from sklearn import datasets, metrics
+from sklearn.model_selection import train_test_split
+
+iris = datasets.load_iris()
+
+#Create X, y and training/test sets
+X= iris.data
+y= iris.target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+
+#Import classifier
+from sklearn.tree import DecisionTreeClassifier
+dt_classifier = DecisionTreeClassifier(random_state=42)
+dt_classifier.fit(X_train,y_train)
+
+print('Validation Accuracy: ', dt_classifier.score(X_test, y_test))
+
+#Outcome:
+#model has high accuracy at 96%
+
+#Check a few other metrics to give a beter idea of how the model fits data
+#Create visualization
+from sklearn.metrics import ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
+ConfusionMatrixDisplay.from_estimator(dt_classifier, X_test, y_test)
+
+plt.show()
+
+#Outcome:
+#Very few observations are being misclassified, so high accuracy is probably correct
+
+#Look at classification report, which shows precision, recal, and F1 score
+#Create the classification report
+y_pred = dt_classifier.predict(X_test)
+print(metrics.classification_report(y_test, y_pred))

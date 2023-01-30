@@ -1,0 +1,63 @@
+#Use the classification metric ROC AUC to interpret a classifier model
+
+#TPR= True Positives/ True Positives + False Positives
+#FPR= False Positives/ False Positives + True Positives
+
+#When creating ROC curve we are plotting TPR against FPR for a range
+#of thresholds
+
+#Plot ROC curve
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+
+#Create the data (feature, target)
+X, y = make_classification(n_samples=10000, n_features=5,
+                           n_classes=2, n_informative=3,
+                           random_state=42)
+
+#Split data into training test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+
+#Fit the model
+logreg_classifier = LogisticRegression().fit(X_train, y_train)
+
+#Create predicatable probabalities
+y_pred_prob = logreg_classifier.predict_proba(X_test)[:,1]
+
+#Create data for ROC curve
+fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
+
+#See the results in a table
+roccurve_df = pd.DataFrame({
+    'False Positive Rate': fpr,
+    'True Positive Rate': tpr,
+    'Threshold': thresholds
+})
+
+roccurve_df.head()
+
+#Plot ROC Curve
+import matplotlib.pyplot as plt
+
+plt.plot(fpr, tpr)
+plt.plot([0,1], ls='--')
+plt.title('ROC Curve')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+
+plt.show()
+
+#Outcome:
+#Looks good
+#The better a model, the higher the curve is, and the greater the area under the curve(AUC)
+#Max value for AUC is equal to 1
+
+#Use tool to calculate AUC
+from sklearn.metrics import roc_auc_score
+roc_auc_score(y_test, y_pred_prob)
+
+
+

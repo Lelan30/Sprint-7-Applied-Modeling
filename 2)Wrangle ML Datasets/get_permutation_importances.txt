@@ -1,0 +1,129 @@
+#Permutation importance: Look at what happens when we change a specific features
+#(change the order)
+
+#Process:
+#-Fit the model to calculate the accuracy on test set
+#-Choose a feature(ranking importance) and randomly permute the test set values
+#-Calculate the accuracy on test set again with permuted column
+#-decrease in accuracy, feature IS important
+#-accuracy stays the same, feature IS NOT important
+#(can be replaced by random numbers)
+
+import pandas as pd
+
+url = "https://raw.githubusercontent.com/bloominstituteoftechnology/DS-Unit-2-Kaggle-Challenge/main/data/weather/weatherAUS.csv" 
+weather = pd.read_csv(url)
+weather.head()
+
+#Drop columns with high-percentage of missing values(and leaky features)
+cols_drop = ['Location', 'Evaporation', 'Sunshine', 'Cloud9am', 'Cloud3pm', 'RISK_MM']
+weather_drop = weather.drop(cols_drop, axis=1)
+
+#Convert 'Date' column to datetime, extract month
+weather_drop['Date'] = pd.to_datetime(weather_drop['Date'], infer_datetime_format=True).dt.month
+
+#Create Pipeline
+import numpy as np
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.tree import DecisionTreeClassifier
+
+#Define the numeric features
+numeric_features = ['MinTemp', 'MaxTemp', 'Rainfall', 'WindGustSpeed', 
+                    'WindSpeed9am','WindSpeed3pm', 'Humidity9am', 
+                    'Humidity3pm', 'Pressure9am','Pressure3pm', 
+                    'Temp9am', 'Temp3pm']
+
+#Create the transformer (imputer, scale)
+numeric_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())])
+
+#Define the categorical features
+categorical_features = ['WindGustDir', 'WindDir9am', 'WindDir3pm', 'RainToday']
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
+    ('ordinal', OrdinalEncoder())])
+
+#Define how the numeric and categorical features will be transformed
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)])
+
+#Define the pipeline steps, include the classifier
+clf = Pipeline(steps=[('preprocessor', preprocessor),
+                      ('classifier', DecisionTreeClassifier())])
+
+#Train and fit model
+X = weather_drop.drop('RainTomorrow', axis=1)
+
+#Create and encode the target array
+from sklearn.preprocessing import LabelEncoder
+label_enc = LabelEncoder()
+y = label_enc.fit_transform(weather_drop['RainTomorrow'])
+
+#Import train test set utility
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42)
+
+#Fit the model
+clf.fit(X_train, y_train)
+print('Validation Accuracy', clf.score(X_test, y_test))
+
+#Feature Importances(after removing leaky features)
+#See how features rank before changing them around
+features_order = numeric_features + categorical_features
+
+importances = pd.Series(clf.steps[1][1].feature_importances_, features_order)
+
+#Plot feature importances
+import matplotlib.pyplot as plt
+
+n = 10
+plt.figure(figsize=(10, n/2))
+plt.title(f'Top {n} features')
+importances.sort_values()[-n:].plot.barh(color='grey')
+
+plt.show()
+
+#Try a few columns and see how permutation of values effect accuracy
+#Start with 'Humidity3pm' then 'WindSpeed3pm'
+#Use SimpleImputer and StandardScaler
+
+#Permutate the values in more important column
+feature = 'Humidity3pm'
+X_test_permuted = X_test.copy()
+
+#fill missing values
+X_test_permuted[feature].fillna(value= X_test_permuted[feature].median(), inplace=True)
+
+#permute
+X_test_permuted[feature] = np.random.permutation(X_test[feature])
+
+print('Feature permuted: ', feature)
+print('Validation Accuracy', clf.score(X_test, y_test))
+print('Validation Accuracy(permuted)', clf.score(X_test_permuted, y_test))
+
+#Outcome:
+#Accuracy went down as expected this feature is important
+#Humidity3pm has some effect on model
+
+
+#Permutate the values in more important column
+feature = 'WindSpeed3pm'
+X_test_permuted = X_test.copy()
+
+#Fill missing values
+X_test_permuted[feature].fillna(value= X_test_permuted[feature].median(), inplace=True)
+
+#permute
+X_test_permuted[feature] = np.random.permutation(X_test[feature])
+
+print('Feature permuted: ', feature)
+print('Validation Accuracy', clf.score(X_test, y_test))
+print('Validation Accuracy(permuted)', clf.score(X_test_permuted, y_test))
